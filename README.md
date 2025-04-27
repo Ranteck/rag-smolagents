@@ -1,163 +1,80 @@
-# SmolAgents RAG with Weaviate
+# RAG Study Project with SmolaGents and BM25
 
-This project implements a Retrieval-Augmented Generation (RAG) system using SmolAgents and Weaviate as the vector store.
+Este proyecto implementa un sistema RAG (Retrieval-Augmented Generation) utilizando SmolaGents y BM25Retriever para procesamiento y consulta de documentos locales. Es una implementación educativa que demuestra cómo construir un sistema RAG utilizando búsqueda basada en términos.
 
-## Setup
+## Características
 
-1. Install and set up UV (if not already installed):
+- Procesamiento de múltiples formatos de documentos (PDF, TXT, DOCX, MD)
+- Búsqueda eficiente con BM25Retriever
+- Integración con modelos de OpenAI mediante SmolaGents
+- Chat interactivo con documentos
+- Manejo robusto de errores
+
+## Configuración
+
+1. Crear y activar el entorno virtual:
 
 ```bash
-# Install UV
-curl -LsSf https://astral.sh/uv/install.sh | sh
+python -m venv .venv
 
-# Create a new virtual environment
-uv venv
-
-# Activate the virtual environment
-# On Windows:
+# En Windows:
 .venv\Scripts\activate
-# On Unix or MacOS:
+# En Unix o MacOS:
 source .venv/bin/activate
 ```
 
-2. Install dependencies with UV:
+2. Instalar dependencias:
 
 ```bash
-uv pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
-3. Set up Weaviate:
-   First, create a Docker network for Weaviate and the text vectorizer:
+3. Configurar variables de entorno:
+   Crear un archivo `.env` con:
 
-   ```bash
-   docker network create weaviate-network
-   ```
+```env
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4-0125-preview  # o el modelo que prefieras
+```
 
-   Start the text vectorizer container:
+## Uso
 
-   ```bash
-   docker run -d \
-     --name t2v-transformers \
-     --network weaviate-network \
-     semitechnologies/transformers-inference:sentence-transformers-multi-qa-MiniLM-L6-cos-v1
-   ```
-
-   Then start Weaviate:
-
-   ```bash
-   docker run -d \
-     --name weaviate-instance \
-     --network weaviate-network \
-     -p 8080:8080 \
-     -e QUERY_DEFAULTS_LIMIT=25 \
-     -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true \
-     -e DEFAULT_VECTORIZER_MODULE=text2vec-transformers \
-     -e ENABLE_MODULES=text2vec-transformers \
-     -e TRANSFORMERS_INFERENCE_API=http://t2v-transformers:8080 \
-     semitechnologies/weaviate:1.21.3
-   ```
-
-4. Configure environment variables:
-   Create a `.env` file with:
-
-   ```.env
-   WEAVIATE_URL=http://localhost:8080
-   OPENAI_API_KEY=your_openai_api_key
-   OPENAI_MODEL=gpt-4  # or gpt-3.5-turbo
-   ```
-
-## Usage
-
-1. Import and initialize the RAG agent:
+1. Ejecutar el script principal:
 
 ```python
-from rag_agent import create_rag_agent, upload_files
-import weaviate
-import os
-
-# Create the agent
-agent = create_rag_agent()
-
-# Initialize Weaviate client for local instance
-client = weaviate.Client(url="http://localhost:8080")
-
-# Upload files to the knowledge base
-files_to_upload = [
-    "documents/doc1.pdf",
-    "documents/doc2.txt",
-    "documents/doc3.docx",
-    "documents/doc4.md"
-]
-
-# Upload the files
-upload_files(client, files_to_upload)
-
-# Query the knowledge base
-response = agent.run("Your question here")
-print(response)
+python rag_agent.py
 ```
 
-### Supported File Types
+2. Seguir las instrucciones en consola para interactuar con los documentos.
 
-The system supports the following file formats:
-- PDF files (`.pdf`)
-- Text files (`.txt`)
-- Word documents (`.doc`, `.docx`)
-- Markdown files (`.md`)
+### Formatos de Archivo Soportados
 
-### Adding Files to the Knowledge Base
+El sistema soporta los siguientes formatos:
 
-You can add files to the knowledge base in two ways:
+- Archivos PDF (`.pdf`)
+- Archivos de texto (`.txt`)
+- Documentos Word (`.doc`, `.docx`)
+- Archivos Markdown (`.md`)
 
-1. **Upload individual files:**
-```python
-upload_files(client, ["path/to/your/file.pdf"])
-```
+## Características Técnicas
 
-2. **Upload multiple files:**
-```python
-files = [
-    "documents/file1.pdf",
-    "documents/file2.txt",
-    "documents/file3.docx"
-]
-upload_files(client, files)
-```
+- Utiliza SmolaGents para interacciones basadas en agentes
+- BM25Retriever para búsqueda eficiente de términos
+- División de documentos en chunks para mejor recuperación
+- Configurable para despliegues locales
+- Utiliza modelos de OpenAI (configurable via variables de entorno)
+- Soporta múltiples formatos de documentos
 
-Each file will be:
-1. Loaded and parsed according to its format
-2. Split into chunks for better retrieval
-3. Vectorized and stored in Weaviate
-4. Made available for querying immediately
+## Notas
 
-## Features
+- Los documentos se dividen automáticamente en chunks para mejor recuperación
+- El tamaño predeterminado de chunk es 500 tokens con 50 tokens de superposición
+- El sistema recupera los 10 chunks más relevantes para cada consulta
+- El modelo de OpenAI se puede configurar mediante la variable OPENAI_MODEL
 
-- Uses SmolAgents for flexible agent-based interactions
-- Weaviate vector store for efficient semantic search
-- Document chunking for better retrieval
-- Configurable for both local and cloud deployments
-- Uses OpenAI models (configurable via environment variables)
-- Supports multiple document formats (PDF, TXT, DOCX, MD)
+## Próximos Pasos
 
-## Notes
-
-- The system uses the text2vec-transformers module in Weaviate for vectorization
-- Documents are automatically split into chunks for better retrieval
-- The default chunk size is 500 tokens with 50 tokens overlap
-- The system retrieves the top 10 most relevant chunks for each query
-- OpenAI model can be configured via OPENAI_MODEL environment variable
-
-## Cleanup
-
-To stop and remove the Docker containers:
-
-```bash
-# Stop containers
-docker stop weaviate-instance t2v-transformers
-
-# Remove containers
-docker rm weaviate-instance t2v-transformers
-
-# Remove network
-docker network rm weaviate-network
-```
+- Implementar caché de resultados
+- Añadir soporte para más formatos de documentos
+- Mejorar la interfaz de usuario
+- Implementar evaluación de calidad de respuestas
